@@ -86,8 +86,10 @@
           >Lấy IP Mới
           <span
             style="font-size: 12px"
-            v-if="item.timeAutoChangeIP && item.timeAutoChangeIP > 0"
-            >: {{ item.timeChangeIpLeft }}</span
+            v-if="
+              item.timeAutoChangeIP && item.timeAutoChangeIP > 0 && timeOut > 0
+            "
+            >: {{ timeOut }}</span
           >
         </v-btn>
         <v-btn small class="btn-action" @click="onClickChangeTimeIP(item)">
@@ -141,7 +143,7 @@ export default {
         mdiShieldAccount,
         mdiTimerSyncOutline,
       },
-      timeOut: 0
+      timeOut: 0,
     };
   },
   mounted() {
@@ -152,20 +154,13 @@ export default {
       while (true) {
         let license = this.item;
         if (license.status !== "EXPIRED" && license.timeAutoChangeIP > 0) {
-          console.log(
-            " #### license.timeChangeIpLeft: ",
-            license.timeChangeIpLeft
-          );
-          if (
-            !license.timeChangeIpLeft ||
-            license.timeChangeIpLeft > license.timeAutoChangeIP
-          ) {
-            license.timeChangeIpLeft = license.timeAutoChangeIP;
+          if (!this.timeOut || this.timeOut > license.timeAutoChangeIP) {
+            this.timeOut = license.timeAutoChangeIP;
           } else {
-            license.timeChangeIpLeft = license.timeChangeIpLeft - 1;
+            this.timeOut--;
           }
-          if (license.timeChangeIpLeft === 0) {
-            license.timeChangeIpLeft = license.timeAutoChangeIP;
+          if (this.timeOut === 0) {
+            this.timeOut = license.timeAutoChangeIP;
             await this.getNewIp(license, false, {
               timeChangeIpLeft: license.timeAutoChangeIP,
             });
@@ -215,7 +210,7 @@ export default {
       let result = await ApiProxy.getNewProxy(license.api_key, this.publicIp);
       if (result.status === Constant.STATUS.SUCCESS) {
         let detail = result.data;
-        let data = ipcRenderer.sendSync("reset-server-proxy", {
+        ipcRenderer.sendSync("reset-server-proxy", {
           proxyUpstream: "http://" + result.data.http_ipv4,
           portLocal: license.portLocal,
         });

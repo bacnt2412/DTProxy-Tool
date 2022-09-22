@@ -17,7 +17,6 @@
         ><span class="ml-1">Tải danh sách proxy</span></v-btn
       >
     </div>
-
     <h2 class="ml-2 mb-1" style="">Danh Sách Proxy</h2>
     <div class="mx-3 justify-end d-flex" style="flex-wrap: wrap">
       <v-btn small class="primary mb-2" @click="onClickCopyLicense">
@@ -122,6 +121,7 @@ import utils from "../utils";
 const Store = require("electron-store");
 const store = new Store();
 import ProxyItem from "./ProxyItem.vue";
+import ip from "ip";
 
 export default {
   name: "Home",
@@ -164,6 +164,7 @@ export default {
           value: "PAUSED",
         },
       ],
+      ipLocal: null,
     };
   },
   computed: {
@@ -181,6 +182,7 @@ export default {
     },
   },
   async mounted() {
+    this.ipLocal = ip.address();
     this.publicIp = await this.getPubicIp();
     await this.getListProxy();
     // this.startThreadChangeIP();
@@ -299,8 +301,9 @@ export default {
       let result = await ApiProxy.getListProxy(tokenApi);
       this.isLoading = false;
       let currentPortLocal = 6800;
-      let ipLocal = ipcRenderer.sendSync("get-private-ip");
+
       if (result.status === Constant.STATUS.SUCCESS) {
+        let vue = this;
         this.listLicense = lodash
           .orderBy(result.data, "start_time_2")
           .map((item, index) => {
@@ -318,7 +321,7 @@ export default {
               stt: index,
               start_time_2: new Date(timeString),
               portLocal: currentPortLocal,
-              proxyLocal: ipLocal + ":" + currentPortLocal,
+              proxyLocal: vue.ipLocal + ":" + currentPortLocal,
             };
           });
         for (let i = 0; i < this.listLicense.length; i++) {
