@@ -8,18 +8,17 @@ import lodash from 'lodash';
 import axios from 'axios';
 import Store from 'electron-store';
 import findProcess from 'find-process';
-import killPort from 'kill-port';
+import ip from 'ip';
 const store = new Store();
 const os = require('os');
 const ProxyChain = require('./plugins/proxy-chain/dist');
-
 const { networkInterfaces } = require('os');
 const isDevelopment = process.env.NODE_ENV !== 'production';
 process.setMaxListeners(Infinity); // <== Important line
 let win = null;
-let ipLocal = null;
 let ipPublic = null;
 let listServerLocal = [];
+let ipLocal =  ip.address();
 
 protocol.registerSchemesAsPrivileged([
     {
@@ -31,25 +30,6 @@ protocol.registerSchemesAsPrivileged([
     },
 ]);
 
-//=================================
-function getPricateIp() {
-    let nets = networkInterfaces();
-    let resultsGetIpLocal = Object.create(null); // Or just '{}', an empty object
-    for (const name of Object.keys(nets)) {
-        for (const net of nets[name]) {
-            // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-            // 'IPv4' is in Node <= 17, from 18 it's a number 4 or 6
-            const familyV4Value = typeof net.family === 'string' ? 'IPv4' : 4
-            if (net.family === familyV4Value && !net.internal) {
-                if (!resultsGetIpLocal[name]) {
-                    resultsGetIpLocal[name] = [];
-                }
-                resultsGetIpLocal[name].push(net.address);
-            }
-        }
-    }
-    return resultsGetIpLocal['Ethernet'][0];
-}
 
 async function getPubicIp() {
     let res = await axios.get('http://lumtest.com/myip.json', {
@@ -150,7 +130,6 @@ async function initApp() {
         logApp(' =================== init App ================== ');
         let appPath = isDevelopment ? __dirname : __static.replace('app.asar', '');
         let fileAudioSuccess = path.join(isDevelopment ? __dirname.replace('dist_electron', '') : appPath, 'Success.mp3');
-        ipLocal = getPricateIp();
         listenActions();
     } catch (error) {
         console.log(' =========== initApp Error ========== ');

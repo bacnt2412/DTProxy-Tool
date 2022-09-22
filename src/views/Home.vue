@@ -18,27 +18,75 @@
       >
     </div>
 
-    <h2 class="ml-2 mb-2" style="">Danh Sách Proxy</h2>
+    <h2 class="ml-2 mb-1" style="">Danh Sách Proxy</h2>
+    <div class="mx-3 justify-end d-flex" style="flex-wrap: wrap">
+      <v-btn small class="primary mb-2" @click="onClickCopyLicense">
+        <v-icon size="14" class="mr-1">{{ icons.mdiContentCopy }}</v-icon> Copy
+        Lincense</v-btn
+      >
+      <v-btn
+        small
+        class="ml-2 mb-2"
+        color="pink"
+        dark
+        @click="onClickCopyHttps"
+      >
+        <v-icon size="14" class="mr-1">{{ icons.mdiContentCopy }}</v-icon> Copy
+        HTTPS</v-btn
+      >
+      <v-btn
+        small
+        class="ml-2 mb-2"
+        color="indigo"
+        dark
+        @click="onClickCopySocks5"
+      >
+        <v-icon size="14" class="mr-1">{{ icons.mdiContentCopy }}</v-icon> Copy
+        Socks5</v-btn
+      >
+      <v-btn
+        small
+        class="ml-2 mb-2"
+        dark
+        color="teal"
+        @click="onClickCopyLocal"
+      >
+        <v-icon size="14" class="mr-1">{{ icons.mdiContentCopy }}</v-icon> Copy
+        Local</v-btn
+      >
+      <v-btn
+        small
+        class="ml-2 mb-2"
+        dark
+        color="purple"
+        @click="onClickSetTimeChangeIP"
+      >
+        <v-icon size="14" class="mr-1">{{ icons.mdiTimerSyncOutline }}</v-icon>
+        Thời Gian Đổi IP</v-btn
+      >
+    </div>
     <v-divider></v-divider>
-    <div
-      class="d-flex flex-row align-center font-weight-bold"
-      style="font-size: 12px"
-    >
+    <div class="d-flex flex-row align-center font-weight-bold fs-12">
       <div class="d-flex align-center" style="flex: 0.1 0 100px">
-        <v-checkbox class="reset py-3 pl-2" hide-details></v-checkbox>
+        <v-checkbox
+          class="reset py-3 pl-2"
+          hide-details
+          @click="onClickCheckALL"
+          v-model="isCheckALL"
+        ></v-checkbox>
         <span class="ml-2">STT</span>
       </div>
       <div style="flex: 1 0 100px" class="mr-2">Ghi chú</div>
       <div style="flex: 1 0 100px" class="mr-2">Api key</div>
       <div style="flex: 1 0 100px" class="mr-2">Ngày tạo/ Hết hạn</div>
-      <div style="flex: 1 0 100px" class="mr-2">Status</div>
-      <div style="flex: 1 0 100px" class="mr-2">IP</div>
+      <div style="flex: 0.1 0 80px" class="mr-2">Status</div>
+      <div style="flex: 1 0 280px" class="mr-2 text-center">IP</div>
       <div style="flex: 1 0 100px" class="text-center">Thao tác</div>
     </div>
     <v-divider></v-divider>
 
-    <v-container class="pa-0" fluid style="font-size: 14px">
-      <div v-for="item in listLicense" :key="item.api_key">
+    <v-container class="pa-0 fs-12" fluid>
+      <div v-for="item in listLicenseShow" :key="item.api_key">
         <proxy-item
           :item="item"
           @onUpdateLicense="onUpdateLicense"
@@ -64,11 +112,13 @@ import {
   mdiMapMarkerRadius,
   mdiReload,
   mdiShieldAccount,
+  mdiTimerSyncOutline,
 } from "@mdi/js";
 import ApiProxy from "../apiProxy";
 import Constant from "../Constant";
 import lodash from "lodash";
 import axios from "axios";
+import utils from "../utils";
 const Store = require("electron-store");
 const store = new Store();
 import ProxyItem from "./ProxyItem.vue";
@@ -86,10 +136,12 @@ export default {
         mdiMapMarkerRadius,
         mdiReload,
         mdiShieldAccount,
+        mdiTimerSyncOutline,
       },
       isLoading: false,
       listLicense: [],
       publicIp: null,
+      isCheckALL: false,
       findByStatus: {
         text: "Đang hoạt động",
         value: "ACTIVE",
@@ -112,45 +164,103 @@ export default {
           value: "PAUSED",
         },
       ],
-      headers: [
-        {
-          text: "STT",
-          align: "start",
-          sortable: false,
-          value: "stt",
-        },
-        { text: "Note", value: "note" },
-        { text: "Gói/License", value: "api_key" },
-        { text: "Ngày bắt đầu/ hết hạn", value: "dateCreate" },
-        { text: "Trạng thái", value: "_status" },
-        { text: "Chi tiết", value: "details" },
-        { text: "Thao tác", value: "actions" },
-      ],
     };
   },
   computed: {
     listLicenseShow() {
-      console.log(" =========== listLicenseShow ========== ");
       let result = this.listLicense.filter((item) => {
         if (this.findByStatus.value) {
           return item.status === this.findByStatus.value;
         }
         return true;
       });
-      result = result.map((item, index) => {
-        return {
-          stt: index,
-          ...item,
-        };
-      });
+      for (let i = 0; i < result.length; i++) {
+        result[i].stt = i;
+      }
       return result;
     },
   },
   async mounted() {
     this.publicIp = await this.getPubicIp();
     await this.getListProxy();
+    // this.startThreadChangeIP();
   },
   methods: {
+    onClickCopyLicense() {
+      let stringLicense = ``;
+      this.listLicense.map((item) => {
+        if (item.selected) {
+          stringLicense += item.api_key + "\n";
+        }
+      });
+      this.onCopy(stringLicense);
+    },
+    onClickCopyHttps() {
+      let textCopy = ``;
+      this.listLicense.map((item) => {
+        if (item.selected && item.detail) {
+          textCopy += item.detail.http_ipv4 + "\n";
+        }
+      });
+      this.onCopy(textCopy);
+    },
+    onClickCopySocks5() {
+      let textCopy = ``;
+      this.listLicense.map((item) => {
+        if (item.selected && item.detail) {
+          textCopy += item.detail.socks_ipv4 + "\n";
+        }
+      });
+      this.onCopy(textCopy);
+    },
+    onClickCopyLocal() {
+      let textCopy = ``;
+      this.listLicense.map((item) => {
+        if (item.selected && item.detail) {
+          textCopy += item.proxyLocal + "\n";
+        }
+      });
+      this.onCopy(textCopy);
+    },
+    async onClickSetTimeChangeIP() {
+      var result = await this.$swal.fire({
+        title: "Thời gian đổi IP",
+        showCancelButton: true,
+        confirmButtonText: "Lưu",
+        cancelButtonText: "Hủy",
+        showLoaderOnConfirm: true,
+        focusConfirm: true,
+        customClass: {
+          container: "position-absolute",
+        },
+        html: `<input type="number" value="0" placeholder="Nhập thời gian" id="swal-input1" class="swal2-input"> (giây)`,
+        preConfirm: () => {
+          return parseInt(document.getElementById("swal-input1").value);
+        },
+      });
+      if (result.isConfirmed) {
+        let timeAutoChangeIP = result.value ? result.value : 0;
+        for (let i = 0; i < this.listLicense.length; i++) {
+          if (this.listLicense[i].selected) {
+            this.listLicense[i].timeAutoChangeIP = timeAutoChangeIP;
+          }
+        }
+        this.$emit("onUpdateLicense", { ...this.item, timeAutoChangeIP });
+      }
+    },
+
+    onClickCheckALL() {
+      let result = this.listLicense.filter((item) => {
+        if (this.findByStatus.value) {
+          return item.status === this.findByStatus.value;
+        }
+        return true;
+      });
+      for (let i = 0; i < result.length; i++) {
+        result[i] = { ...result[i], selected: this.isCheckALL };
+      }
+      this.listLicense = [...result];
+    },
     onUpdateLicense(license) {
       this.listLicense = this.listLicense.map((item) => {
         if (item.api_key === license.api_key) {
@@ -169,13 +279,14 @@ export default {
       return null;
     },
     async onCopy(text) {
-      clipboard.writeText(text, "selection");
+      clipboard.writeText(text.trim(), "selection");
       this.$swal.fire({
         icon: "success",
         title: "Đã Copy",
         toast: true,
         position: "top-end",
         showConfirmButton: false,
+        target: "#custom-target",
         timer: 1000,
       });
     },
@@ -244,6 +355,34 @@ export default {
         });
       }
     },
+
+    // async startThreadChangeIP() {
+    //   setInterval(() => {
+    //     console.log(" ########### setInterval ########### ", this.listLicense);
+
+    //     for (let i = 0; i < this.listLicense.length; i++) {
+    //       let license = this.listLicense[i];
+    //       if (license.status !== "EXPIRED" && license.timeAutoChangeIP > 0) {
+    //         console.log(
+    //           " #### license.timeChangeIpLeft: ",
+    //           license.timeChangeIpLeft
+    //         );
+    //         if (!license.timeChangeIpLeft || license.timeChangeIpLeft > license.timeAutoChangeIP) {
+    //           license.timeChangeIpLeft = license.timeAutoChangeIP;
+    //           //Change IP
+    //           console.log(
+    //             " ======================================================== "
+    //           );
+    //           //==========
+    //         } else {
+    //           license.timeChangeIpLeft = license.timeChangeIpLeft - 1;
+    //         }
+    //         this.listLicense[i] = Object.assign({}, license);
+    //       }
+    //     }
+    //     this.listLicense = [...this.listLicense];
+    //   }, 1000);
+    // },
   },
 };
 </script>

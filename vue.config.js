@@ -6,7 +6,22 @@ module.exports = {
             // nodeModulesPath: ['../../node_modules', './node_modules'],
             nodeIntegration: true,
             builderOptions: {
-                extraResources: ['Success.mp3'],
+                appId: "com.dtproxy.app",
+                productName: "DTProxy Multiple Tool",
+                target: "NSIS",
+                directories: {
+                    "output": "build/app"
+                },
+                nsis: {
+                    "allowToChangeInstallationDirectory": true,
+                    "oneClick": false
+                },
+                fileAssociations: [
+                    {
+                        ext: 'ico',
+                        icon: 'app-icon.ico'
+                    }
+                ]
             },
         },
     },
